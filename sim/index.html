@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>In the Balance: Furuta pendulum sim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0A1120;
+    --panel:rgba(18,24,38,.93);
+    --panel-deep:rgba(8,12,22,.85);
+    --bronze:#B8995A;
+    --bronze-hi:#E4CB8C;
+    --bronze-dim:rgba(184,153,90,.3);
+    --title:#F3E6C0;
+    --text:#DCDFE7;
+    --muted:#9CA5B8;
+    --aether:#79C8EE;
+    --party:#6FD3F7;
+    --school:#9FE08F;
+    --system:#F0E2A8;
+    --hp:#7BD86A;
+    --mp:#C97BE0;
+  }
+  *{box-sizing:border-box}
+  html{background:var(--night);-webkit-text-size-adjust:100%}
+  body{
+    margin:0;min-height:100vh;color:var(--text);
+    font-family:"Noto Sans","Segoe UI",sans-serif;font-size:1.05rem;line-height:1.6;
+    background:
+      radial-gradient(ellipse 70% 45% at 50% -8%, rgba(121,200,238,.18), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 12% 100%, rgba(201,123,224,.07), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 88% 100%, rgba(184,153,90,.08), transparent 70%),
+      var(--night);
+  }
+  a{color:var(--aether);text-underline-offset:.18em;text-decoration-thickness:1px}
+  a:hover{color:#B8E4F7}
+  :focus-visible{outline:2px solid var(--aether);outline-offset:3px}
+  h1,h2,h3{margin:0;font-weight:400}
+
+  .wrap{max-width:76rem;margin:0 auto;padding:clamp(1rem,4vw,2.75rem) clamp(.8rem,3vw,2rem) 3rem;display:grid;gap:1.4rem}
+
+  /* ---------- window chrome ---------- */
+  .window{
+    position:relative;background:var(--panel);
+    border:1px solid var(--bronze);border-radius:10px;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.6), inset 0 0 0 2px var(--bronze-dim), 0 14px 40px rgba(0,0,0,.5);
+    padding:0 0 1.4rem;overflow:hidden;
+  }
+  .titlebar{
+    display:flex;align-items:center;gap:.6rem;
+    padding:.55rem 1.1rem .5rem;margin-bottom:1.1rem;
+    background:linear-gradient(180deg,rgba(184,153,90,.28),rgba(184,153,90,.06) 70%,transparent);
+    border-bottom:1px solid var(--bronze-dim);
+  }
+  .titlebar h2{
+    font-family:"Cinzel",Georgia,serif;font-weight:600;font-size:1.05rem;letter-spacing:.06em;
+    color:var(--title);text-shadow:0 0 8px rgba(228,203,140,.35);
+  }
+  .titlebar .gem{width:10px;height:10px;transform:rotate(45deg);background:var(--bronze);box-shadow:0 0 6px rgba(228,203,140,.6);flex:none}
+  .pad{padding:0 1.3rem}
+
+  /* ---------- nameplate ---------- */
+  .nameplate{padding:1.5rem 1.5rem 1.2rem}
+  .np-grid{display:grid;gap:1.1rem 2.5rem;align-items:end}
+  @media (min-width:860px){.np-grid{grid-template-columns:1fr 22rem}}
+  .cast{align-self:end}
+  .cast-top{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;font-size:.92rem}
+  .cast-top .lbl{color:var(--muted)}
+  .cast-top .spell{font-family:"Cinzel",Georgia,serif;font-weight:600;color:var(--title);letter-spacing:.03em}
+  .castbar{position:relative;height:12px;margin-top:.35rem;border-radius:6px;background:rgba(0,0,0,.6);border:1px solid var(--bronze);overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.8)}
+  .castbar i{position:absolute;inset:0 auto 0 0;width:62%;border-radius:6px;
+    background:linear-gradient(180deg,#FFF1C6,#E4CB8C 45%,#A8843F);
+    box-shadow:0 0 10px rgba(228,203,140,.7);transition:width 1s linear}
+  .cast-note{margin:.35rem 0 0;font-size:.9rem;color:var(--muted)}
+  .np-title{margin:0;color:var(--aether);font-family:"Cinzel",Georgia,serif;font-size:clamp(.95rem,2vw,1.1rem);letter-spacing:.04em}
+  .name{
+    font-family:"Cinzel",Georgia,serif;font-weight:700;color:var(--title);
+    font-size:clamp(2rem,5.6vw,3.5rem);line-height:1.08;letter-spacing:.03em;
+    text-shadow:0 0 18px rgba(228,203,140,.25),0 2px 0 rgba(0,0,0,.6);
+  }
+  .fc{font-size:.5em;color:var(--bronze-hi);letter-spacing:.06em;vertical-align:middle}
+  .job{display:flex;align-items:center;gap:.6rem;margin:.45rem 0 0;color:var(--text)}
+  .job svg{width:26px;height:26px;flex:none}
+  .job .muted{color:var(--muted)}
+
+  /* hotbar */
+  .hotbar{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.4rem;padding-top:1.1rem;border-top:1px solid var(--bronze-dim)}
+  .slot-btn{
+    position:relative;display:flex;flex-direction:column;align-items:center;gap:.3rem;
+    text-decoration:none;color:var(--muted);font-size:.9rem;background:none;border:0;padding:0;font-family:inherit;cursor:pointer;
+  }
+  .slot-btn .face{
+    width:58px;height:58px;display:grid;place-items:center;border-radius:8px;
+    background:radial-gradient(circle at 50% 30%,#2A3752,#121A2B 75%);
+    border:1px solid var(--bronze);box-shadow:inset 0 0 0 2px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  .slot-btn .face svg{width:28px;height:28px}
+  .slot-btn .key{position:absolute;top:3px;left:6px;font-size:.78rem;color:var(--title);text-shadow:0 1px 2px #000}
+  .slot-btn:hover .face{border-color:var(--bronze-hi);box-shadow:inset 0 0 0 2px rgba(0,0,0,.55),0 0 12px rgba(228,203,140,.45)}
+  .slot-btn:hover{color:var(--title)}
+
+  /* ---------- layout ---------- */
+  .layout{display:grid;gap:1.4rem}
+  .col{display:contents}
+  .character{order:1}.journal{order:2}.playing{order:3}.logwin{order:4}
+  @media (min-width:980px){
+    .layout{grid-template-columns:24rem 1fr;align-items:start}
+    .col{display:flex;flex-direction:column;gap:1.4rem;min-width:0}
+    .logwin{grid-column:1/-1}
+  }
+
+  /* character */
+  .stat{display:grid;grid-template-columns:7rem 1fr;gap:.1rem 1rem;margin:0}
+  .stat dt{color:var(--muted)}
+  .stat dd{margin:0 0 .45rem}
+  .sub-h{font-family:"Cinzel",Georgia,serif;font-size:.95rem;letter-spacing:.05em;color:var(--bronze-hi);margin:1.1rem 0 .6rem;padding-top:1rem;border-top:1px solid var(--bronze-dim)}
+  .disc{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
+  .disc li{display:flex;justify-content:space-between;gap:1rem}
+  .rank{font-style:italic;color:var(--muted)}
+  .rank.hi{color:var(--title);font-style:normal}
+
+  /* tabs */
+  .tabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:0 1.3rem 1.2rem;border-bottom:1px solid var(--bronze-dim)}
+  .tab{
+    font:inherit;font-family:"Cinzel",Georgia,serif;font-size:.95rem;letter-spacing:.04em;color:var(--muted);
+    background:transparent;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;
+    padding:.5rem 1rem;min-height:44px;cursor:pointer;margin-bottom:-1px;
+  }
+  .tab:hover{color:var(--title)}
+  .tab[aria-selected="true"]{color:var(--title);background:linear-gradient(180deg,rgba(184,153,90,.22),rgba(8,12,22,.85));border-color:var(--bronze-dim)}
+  [role="tabpanel"][hidden]{display:none}
+
+  /* quests */
+  .quests{list-style:none;margin:0;padding:0;display:grid;gap:.75rem}
+  .quest{
+    display:grid;grid-template-columns:2rem 1fr;gap:.15rem .85rem;
+    padding:.95rem 1.05rem;background:var(--panel-deep);border:1px solid rgba(184,153,90,.18);border-radius:6px;
+  }
+  .quest.msq{border-color:rgba(228,203,140,.5);background:linear-gradient(90deg,rgba(184,153,90,.14),var(--panel-deep) 45%)}
+  .q-icon{width:1.9rem;height:1.9rem}
+  .q-kind{font-size:.88rem;color:var(--muted)}
+  .msq .q-kind{color:var(--bronze-hi)}
+  .q-head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap}
+  .q-head h3{font-family:"Cinzel",Georgia,serif;font-weight:600;font-size:1.12rem;color:var(--title);letter-spacing:.02em}
+  .q-head h3 a{color:inherit;text-decoration:none}
+  .q-head h3 a:hover{text-decoration:underline;text-decoration-color:var(--bronze)}
+  .q-state{font-size:.95rem;color:var(--muted)}
+  .q-state.on{color:var(--hp)}
+  .quest p{grid-column:2;margin:.25rem 0 0;max-width:62ch}
+  .kit{grid-column:2;margin-top:.35rem;font-size:.98rem;color:var(--muted);font-style:italic}
+
+  /* gear */
+  .gear{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))}
+  .g-slot{display:grid;grid-template-columns:46px 1fr;gap:.8rem;align-items:center;padding:.6rem .8rem;background:var(--panel-deep);border:1px solid rgba(184,153,90,.18);border-radius:6px}
+  .g-icon{width:46px;height:46px;border-radius:6px;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#26324B,#10172A 75%);border:1px solid var(--bronze-dim)}
+  .g-icon svg{width:24px;height:24px}
+  .g-slot h3{font-size:.9rem;color:var(--muted)}
+  .g-slot p{margin:0;line-height:1.35}
+
+  /* training */
+  .t-top{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:.7rem}
+  .t-top p{margin:0;max-width:54ch}
+  .readout{font-variant-numeric:tabular-nums;color:var(--aether)}
+  .stage{position:relative}
+  .stage canvas{display:block;width:100%;height:auto;cursor:grab;background:var(--panel-deep);border:1px solid rgba(184,153,90,.2);border-radius:6px}
+  .banner{
+    position:absolute;left:0;right:0;top:30%;display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.6rem 0;
+    background:linear-gradient(90deg,transparent,rgba(8,12,22,.92) 20%,rgba(8,12,22,.92) 80%,transparent);
+    pointer-events:none;opacity:0;transition:opacity .35s ease;
+  }
+  .banner.show{opacity:1}
+  .banner .rule{width:min(70%,420px);height:1px;background:linear-gradient(90deg,transparent,var(--bronze-hi),transparent)}
+  .banner strong{
+    font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:clamp(1.4rem,4vw,2.3rem);letter-spacing:.08em;color:var(--title);
+    text-shadow:0 0 16px rgba(228,203,140,.6),0 2px 0 #000;
+  }
+  .gauges{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.9rem 0 .4rem}
+  .gauge span{display:flex;justify-content:space-between;font-size:.95rem;color:var(--muted)}
+  .bar{height:10px;border-radius:5px;background:rgba(0,0,0,.55);border:1px solid rgba(184,153,90,.3);overflow:hidden;margin-top:.25rem}
+  .bar i{display:block;height:100%;width:100%;border-radius:5px}
+  #hpbar{background:linear-gradient(180deg,#A6EE92,var(--hp) 55%,#4E9E41)}
+  #mpbar{background:linear-gradient(180deg,#E3A9F2,var(--mp) 55%,#8A4AA0);width:0}
+  .t-status{min-height:1.6em;margin:.3rem 0 .8rem;color:var(--muted)}
+  .gains{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+  .gains label{display:flex;flex-direction:column;color:var(--muted);font-size:1rem}
+  .gains .top{display:flex;justify-content:space-between}
+  .gains output{color:var(--text);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--bronze);min-height:28px;margin:.3rem 0 0}
+  .t-actions{display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
+  .btn{
+    display:inline-flex;align-items:center;min-height:44px;padding:.4rem 1.2rem;
+    font:inherit;font-family:"Cinzel",Georgia,serif;font-size:.95rem;letter-spacing:.04em;color:var(--title);cursor:pointer;
+    background:linear-gradient(180deg,#34405A,#1A2236);border:1px solid var(--bronze);border-radius:6px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(0,0,0,.5);
+  }
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn:not(:disabled):hover{border-color:var(--bronze-hi);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 12px rgba(228,203,140,.4)}
+
+  /* chat log */
+  .chat-tabs{display:flex;gap:.25rem;margin:0 1.3rem .6rem}
+  .chat-tab{
+    font:inherit;font-size:.95rem;color:var(--muted);background:rgba(0,0,0,.35);cursor:pointer;
+    border:1px solid rgba(184,153,90,.2);border-radius:6px 6px 0 0;padding:.3rem .9rem;min-height:40px;
+  }
+  .chat-tab[aria-pressed="true"]{color:var(--title);border-color:var(--bronze-dim);background:rgba(184,153,90,.16)}
+  .log{list-style:none;margin:0 1.3rem;padding:.8rem 1rem;background:rgba(0,0,0,.4);border-radius:0 6px 6px 6px;display:grid;gap:.3rem;font-size:1.02rem}
+  .log li[hidden]{display:none}
+  .log .t{color:#6E7890;font-variant-numeric:tabular-nums;margin-right:.35rem}
+  .log .team{color:var(--party)}
+  .log .school{color:var(--school)}
+  .log .sys{color:var(--system)}
+
+  /* orchestrion */
+  .track{display:grid;grid-template-columns:84px 1fr;gap:1rem;align-items:center;text-decoration:none;color:var(--text);
+    padding:.75rem;background:var(--panel-deep);border:1px solid rgba(184,153,90,.25);border-radius:6px}
+  .track[hidden]{display:none}
+  .track:hover{border-color:var(--bronze)}
+  .track:hover .t-name{text-decoration:underline;text-decoration-color:var(--bronze)}
+  .art{width:84px;height:84px;object-fit:cover;border-radius:4px;border:1px solid var(--bronze-dim);background:#10172A;display:block}
+  .t-info{display:flex;flex-direction:column;gap:.1rem;min-width:0}
+  .t-state{display:flex;align-items:center;gap:.45rem;font-size:.85rem;color:var(--hp)}
+  .t-state.idle{color:var(--muted)}
+  .t-name{font-family:"Cinzel",Georgia,serif;font-weight:600;color:var(--title);font-size:1.02rem;line-height:1.3;
+    overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .t-artist{color:var(--muted);font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .eq{display:inline-flex;align-items:flex-end;gap:2px;height:12px}
+  .eq i{width:3px;height:100%;background:var(--hp);border-radius:1px;animation:eq 1s ease-in-out infinite}
+  .eq i:nth-child(2){animation-delay:-.35s}.eq i:nth-child(3){animation-delay:-.7s}
+  @keyframes eq{0%,100%{height:30%}50%{height:100%}}
+  .t-state.idle .eq{display:none}
+  @media (prefers-reduced-motion:reduce){.eq i{animation:none;height:70%}}
+  .playing .note{margin:.7rem 0 0;color:var(--muted);font-size:1rem}
+
+  footer{text-align:center;color:var(--muted);font-size:.95rem;font-family:"Cinzel",Georgia,serif;letter-spacing:.05em}
+
+  /* duty objectives */
+  .duty{display:grid;gap:1rem;margin-bottom:.9rem}
+  @media (min-width:760px){.duty{grid-template-columns:1fr 15.5rem;align-items:start}}
+  .objectives{margin:0;padding:.8rem 1rem;list-style:none;background:rgba(0,0,0,.35);border:1px solid var(--bronze-dim);border-radius:6px;display:grid;gap:.45rem;font-size:.95rem}
+  .objectives .o-h{font-family:"Cinzel",Georgia,serif;font-weight:600;color:var(--bronze-hi);letter-spacing:.04em;font-size:.9rem;margin-bottom:.1rem}
+  .objectives li{display:grid;grid-template-columns:14px 1fr;gap:.55rem;align-items:start;color:var(--text)}
+  .objectives li::before{content:"";width:9px;height:9px;margin-top:.45em;transform:rotate(45deg);border:1px solid var(--bronze);background:transparent}
+  .objectives .o-h::before{display:none}
+  .objectives li.done{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(156,165,184,.6)}
+  .objectives li.done::before{background:var(--hp);border-color:var(--hp);box-shadow:0 0 6px rgba(123,216,106,.7)}
+
+  @media (prefers-reduced-motion:reduce){.banner{transition:none}.castbar i{transition:none}}
+
+  .solo{max-width:60rem;margin:0 auto;padding:clamp(1rem,4vw,2.5rem) clamp(.8rem,3vw,2rem)}
+</style>
+</head>
+<body>
+<main class="solo">
+  <section class="window" aria-labelledby="t">
+    <div class="titlebar"><span class="gem" aria-hidden="true"></span><h2 id="t">In the Balance: rotary pendulum sim</h2></div>
+    <div class="pad" role="tabpanel" id="panel-training" aria-labelledby="tab-training">
+          <div class="duty">
+            <div class="t-top">
+              <p>A 3D sim of the rotary pendulum my team is building. Swing it up, let the PID catch it, then mess with the gains and see what happens. Drag to look around, click to push it.</p>
+              <span class="readout" id="readout">θ = 180.0°</span>
+            </div>
+            <ul class="objectives" aria-label="Training objectives">
+              <li class="o-h" style="grid-template-columns:1fr">Objectives</li>
+              <li id="obj-swing">Swing it up</li>
+              <li id="obj-push">Recover from a push</li>
+              <li id="obj-ki">Hold it with Ki at 0</li>
+              <li id="obj-kd">Set Kd to 0 and push it</li>
+              <li id="obj-fall">Drop Kp below 10, then push it</li>
+            </ul>
+          </div>
+          <div class="stage">
+            <canvas id="pend" width="720" height="440" role="img" aria-label="3D simulation of a rotary (Furuta) pendulum. A motor spins an arm with a pendulum on its tip. It starts hanging down; Swing up rocks the arm to raise it, then a PID controller balances it upright. Drag to rotate the view, click to push it while balancing."></canvas>
+            <div class="banner" id="banner" aria-hidden="true"><span class="rule"></span><strong id="banner-text">Balance Restored</strong><span class="rule"></span></div>
+          </div>
+          <div class="gauges">
+            <div class="gauge"><span>Stability <b id="hpv">0%</b></span><div class="bar"><i id="hpbar"></i></div></div>
+            <div class="gauge"><span>Motor effort <b id="mpv">0%</b></span><div class="bar"><i id="mpbar"></i></div></div>
+          </div>
+          <p class="t-status" id="t-status" aria-live="polite"></p>
+          <div class="gains">
+            <label><span class="top">Kp <output id="kpv">40</output></span><input id="kp" type="range" min="0" max="80" step="0.5" value="40"></label>
+            <label><span class="top">Ki <output id="kiv">4</output></span><input id="ki" type="range" min="0" max="20" step="0.5" value="4"></label>
+            <label><span class="top">Kd <output id="kdv">8</output></span><input id="kd" type="range" min="0" max="20" step="0.5" value="8"></label>
+          </div>
+          <div class="t-actions">
+            <button type="button" class="btn" id="swing">Swing up</button>
+            <button type="button" class="btn" id="nudge" disabled>Push the pendulum</button>
+            <button type="button" class="btn" id="reset">Reset</button>
+          </div>
+        </div>
+  </section>
+  <footer style="margin-top:1.2rem">Part of <a href="https://github.com/OscarC727/rotary-inverted-pendulum">rotary-inverted-pendulum</a> · <a href="https://oscarc727.github.io">oscarc727.github.io</a></footer>
+</main>
+<script>
+/* ---------- Furuta (rotary) pendulum: swing-up, then PID balance, drawn in 3D ----------
+   A motor spins a horizontal arm; the pendulum hangs off the arm's tip and swings in the
+   plane tangent to it. theta is the pendulum angle from straight up, phi is the arm angle.
+   The control input a is the arm tip's acceleration:
+     theta'' = g*sin(theta) - a*cos(theta) + phi'^2*sin(theta)*cos(theta)
+   Swing-up pumps energy in, then the PID catches it near the top. A small second loop
+   keeps the arm from wandering off, same idea as on the real rig. */
+(function(){
+  var cv = document.getElementById('pend'), ctx = cv.getContext('2d');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var g = 9.81, aMax = 30, swingA = 7;
+  var th = Math.PI, w = 0, phi = 0, pw = 0, integ = 0, a = 0;
+  var mode = 'down';            // down | swing | balance
+  var disturbed = false, pushed = false, calm = 0, kdRing = 0;
+  var trace = [], N = 300, lastStatus = '';
+  var kp = document.getElementById('kp'), ki = document.getElementById('ki'), kd = document.getElementById('kd');
+  var statusEl = document.getElementById('t-status'), readout = document.getElementById('readout');
+  var hpbar = document.getElementById('hpbar'), mpbar = document.getElementById('mpbar');
+  var hpv = document.getElementById('hpv'), mpv = document.getElementById('mpv');
+  var swingBtn = document.getElementById('swing'), pushBtn = document.getElementById('nudge');
+  var banner = document.getElementById('banner'), bannerText = document.getElementById('banner-text'), bannerTimer = null;
+  var objs = { swing:false, push:false, ki:false, kd:false, fall:false }, allDone = false;
+
+  function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
+  function wrap(t){ return Math.atan2(Math.sin(t), Math.cos(t)); }
+  function sync(){
+    document.getElementById('kpv').textContent = kp.value;
+    document.getElementById('kiv').textContent = ki.value;
+    document.getElementById('kdv').textContent = kd.value;
+  }
+  [kp, ki, kd].forEach(function(el){ el.addEventListener('input', sync); });
+  sync();
+
+  function setStatus(s){ if(s !== lastStatus){ statusEl.textContent = s; lastStatus = s; } }
+  function showBanner(text){
+    bannerText.textContent = text;
+    banner.classList.add('show');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(function(){ banner.classList.remove('show'); }, 2400);
+  }
+  function complete(key, label){
+    if(objs[key]) return;
+    objs[key] = true;
+    document.getElementById('obj-' + key).classList.add('done');
+    statusEl.textContent = 'Objective complete: ' + label + '.'; lastStatus = statusEl.textContent;
+    if(!allDone && objs.swing && objs.push && objs.ki && objs.kd && objs.fall){
+      allDone = true;
+      setTimeout(function(){ showBanner('Training Complete'); statusEl.textContent = 'All objectives complete.'; lastStatus = statusEl.textContent; }, 900);
+    }
+  }
+  function setMode(m){
+    mode = m;
+    swingBtn.disabled = (m !== 'down');
+    pushBtn.disabled = (m !== 'balance');
+  }
+  function reset(){ th = Math.PI; w = 0; phi = 0; pw = 0; integ = 0; a = 0; trace.length = 0; disturbed = pushed = false; setMode('down'); }
+  function push(dir){
+    if(mode !== 'balance') return;
+    w += (dir || (Math.random() < .5 ? -1 : 1)) * (1.6 + Math.random() * .6);
+    disturbed = pushed = true; calm = 0;
+  }
+  swingBtn.addEventListener('click', function(){ if(mode === 'down'){ integ = 0; setMode('swing'); } });
+  pushBtn.addEventListener('click', function(){ push(); });
+  document.getElementById('reset').addEventListener('click', reset);
+
+  /* ----- camera: drag to orbit, click (without dragging) to push ----- */
+  var yaw = -0.75, pitch = 0.32, dragged = false, userOrbited = false, down = null;
+  cv.style.touchAction = 'pan-y';
+  cv.addEventListener('pointerdown', function(e){ down = { x: e.clientX, y: e.clientY, yaw: yaw, pitch: pitch, id: e.pointerId }; dragged = false; });
+  cv.addEventListener('pointermove', function(e){
+    if(!down || e.pointerId !== down.id) return;
+    var dx = e.clientX - down.x, dy = e.clientY - down.y;
+    if(!dragged && Math.abs(dx) + Math.abs(dy) > 6){ dragged = true; userOrbited = true; try{ cv.setPointerCapture(e.pointerId); }catch(_){} }
+    if(dragged){
+      yaw = down.yaw + dx * 0.008;
+      if(e.pointerType === 'mouse') pitch = clamp(down.pitch + dy * 0.006, -0.05, 1.1);
+    }
+  });
+  function endDrag(e){
+    if(!down) return;
+    if(!dragged && e.type === 'pointerup') push();
+    down = null;
+  }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+
+  function step(dt){
+    var E = 0.5 * w * w + g * (Math.cos(th) - 1);      // 0 when resting upright
+    if(mode === 'swing'){
+      if(Math.abs(wrap(th)) < 0.3){ th = wrap(th); integ = 0; setMode('balance'); disturbed = true; calm = 0; complete('swing', 'swung it up'); }
+      else {
+        a = 1.2 * E * w * Math.cos(th);                // pump energy toward the top
+        if(Math.abs(w) < .05 && E < -2 * g + .05) a = swingA;   // kick it off from rest
+        a = clamp(a, -swingA, swingA) - 1.5 * phi - 2 * pw;      // keep the arm near home
+      }
+    }
+    if(mode === 'balance'){
+      integ = clamp(integ + th * dt, -1.5, 1.5);
+      a = +kp.value * th + +ki.value * integ + +kd.value * w + 1.2 * phi + 2 * pw;
+      a = clamp(a, -aMax, aMax);
+    }
+    if(mode === 'down') a = -4 * pw;                     // arm coasts to a stop
+
+    w += (g * Math.sin(th) - a * Math.cos(th) + pw * pw * Math.sin(th) * Math.cos(th) - .05 * w) * dt
+         + (Math.random() - .5) * .004;
+    th += w * dt;
+    pw += a * dt; phi += pw * dt;
+
+    if(mode === 'balance' && Math.abs(th) > 0.9){
+      setMode('down'); disturbed = false;
+      if(+kp.value < 10) complete('fall', 'gravity won below Kp 10');
+      if(+kd.value === 0) complete('kd', 'saw what happens with Kd at 0');
+    }
+  }
+
+  /* ----- tiny 3D renderer: flat-shaded faces sorted back to front ----- */
+  var W = cv.width, H = cv.height, F = 560, DIST = 5.2, CX = W / 2, CY = (H - 56) / 2 + 4, AIM = -0.18;
+  var LIGHT = norm([-0.45, 0.8, -0.4]);
+  function norm(v){ var l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+  function add(p, q){ return [p[0] + q[0], p[1] + q[1], p[2] + q[2]]; }
+  function sub(p, q){ return [p[0] - q[0], p[1] - q[1], p[2] - q[2]]; }
+  function mul(p, s){ return [p[0] * s, p[1] * s, p[2] * s]; }
+  function cross(p, q){ return [p[1] * q[2] - p[2] * q[1], p[2] * q[0] - p[0] * q[2], p[0] * q[1] - p[1] * q[0]]; }
+  function dot(p, q){ return p[0] * q[0] + p[1] * q[1] + p[2] * q[2]; }
+  function view(p){
+    var cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    var x = p[0] * cy - p[2] * sy, z = p[0] * sy + p[2] * cy, y = p[1] - AIM;   // aim at the rig's middle
+    var y2 = y * cp - z * sp, z2 = y * sp + z * cp;
+    return [x, y2, z2 + DIST];
+  }
+  function proj(v){ return [CX + F * v[0] / v[2], CY - F * v[1] / v[2]]; }
+  function shade(rgb, k){ return 'rgb(' + Math.round(rgb[0] * k) + ',' + Math.round(rgb[1] * k) + ',' + Math.round(rgb[2] * k) + ')'; }
+
+  var faces;
+  function face(pts, rgb, opt){
+    var vs = pts.map(view);
+    var n = cross(sub(vs[1], vs[0]), sub(vs[2], vs[0]));
+    var c = vs.reduce(function(s, v){ return add(s, v); }, [0, 0, 0]);
+    if(dot(n, c) > 0) return;                                  // facing away
+    var wn = norm(cross(sub(pts[1], pts[0]), sub(pts[2], pts[0])));
+    var k = 0.45 + 0.6 * Math.max(0, dot(wn, LIGHT));
+    faces.push({ pts: vs.map(proj), z: c[2] / vs.length, fill: shade(rgb, (opt && opt.flat) ? 1 : k), glow: opt && opt.glow, edge: opt && opt.edge });
+  }
+  // box from a center and three half-axis vectors
+  function box(c, u, v, n, rgb, opt){
+    var P = function(a, b, d){ return add(add(add(c, mul(u, a)), mul(v, b)), mul(n, d)); };
+    face([P(-1,-1, 1), P( 1,-1, 1), P( 1, 1, 1), P(-1, 1, 1)], rgb, opt);
+    face([P( 1,-1,-1), P(-1,-1,-1), P(-1, 1,-1), P( 1, 1,-1)], rgb, opt);
+    face([P( 1,-1, 1), P( 1,-1,-1), P( 1, 1,-1), P( 1, 1, 1)], rgb, opt);
+    face([P(-1,-1,-1), P(-1,-1, 1), P(-1, 1, 1), P(-1, 1,-1)], rgb, opt);
+    face([P(-1, 1, 1), P( 1, 1, 1), P( 1, 1,-1), P(-1, 1,-1)], rgb, opt);
+    face([P(-1,-1,-1), P( 1,-1,-1), P( 1,-1, 1), P(-1,-1, 1)], rgb, opt);
+  }
+  // upright cylinder, y0 to y1
+  function cyl(r, y0, y1, rgb, seg, opt){
+    seg = seg || 24;
+    var top = [], bot = [];
+    for(var i = 0; i < seg; i++){
+      var t = i / seg * Math.PI * 2, x = Math.cos(t) * r, z = Math.sin(t) * r;
+      top.push([x, y1, z]); bot.push([x, y0, z]);
+    }
+    for(i = 0; i < seg; i++){
+      var j = (i + 1) % seg;
+      face([bot[i], bot[j], top[j], top[i]], rgb, opt);
+    }
+    face(top.slice().reverse(), rgb, opt);
+    face(bot, rgb, opt);
+  }
+  // segment with a square cross-section from p to q
+  function beam(p, q, t, rgb, opt){
+    var d = sub(q, p), L = Math.hypot(d[0], d[1], d[2]), u = mul(d, 0.5 / L);
+    var ref = Math.abs(d[1]) / L > 0.9 ? [1, 0, 0] : [0, 1, 0];
+    var v = mul(norm(cross(d, ref)), t), n = mul(norm(cross(u, v)), t);
+    box(mul(add(p, q), 0.5), mul(u, L), v, n, rgb, opt);
+  }
+  function octa(c, s, rot, rgb, opt){
+    var up = [Math.sin(rot[0]) * s * 1.6 * rot[1][0], Math.cos(rot[0]) * s * 1.6, Math.sin(rot[0]) * s * 1.6 * rot[1][2]];
+    var e1 = mul(norm(cross(up, [0, 1, 0.001])), s), e2 = mul(norm(cross(up, e1)), s);
+    var T = add(c, up), B = sub(c, up), R = [add(c, e1), add(c, e2), sub(c, e1), sub(c, e2)];
+    for(var i = 0; i < 4; i++){
+      var r0 = R[i], r1 = R[(i + 1) % 4];
+      face([T, r1, r0], rgb, opt); face([B, r0, r1], rgb, opt);
+    }
+  }
+
+  function line3(p, q, style, width, dash){
+    var a0 = view(p), b0 = view(q);
+    if(a0[2] < .2 || b0[2] < .2) return;
+    var A = proj(a0), B = proj(b0);
+    ctx.strokeStyle = style; ctx.lineWidth = width; ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function ring3(r, y, style, width, dash){
+    ctx.strokeStyle = style; ctx.lineWidth = width; ctx.setLineDash(dash || []);
+    ctx.beginPath();
+    for(var i = 0; i <= 64; i++){
+      var t = i / 64 * Math.PI * 2, P = proj(view([Math.cos(t) * r, y, Math.sin(t) * r]));
+      if(i === 0) ctx.moveTo(P[0], P[1]); else ctx.lineTo(P[0], P[1]);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  var ARM = 1.05, ROD = 1.15, TOP = 0.02;
+  var C_BASE = [26, 35, 55], C_MOTOR = [58, 74, 108], C_TRIM = [184, 153, 90], C_ARM = [228, 203, 140], C_ROD = [243, 230, 192], C_BOB = [121, 200, 238];
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+
+    // arm's sweep ring and the base's footprint, drawn flat first
+    ring3(ARM, TOP, 'rgba(184,153,90,.28)', 1, [5, 7]);
+
+    faces = [];
+    box([0, -1.47, 0], [0.7, 0, 0], [0, 0.05, 0], [0, 0, 0.7], C_BASE, { edge: true });
+    cyl(0.24, -1.42, -0.08, C_MOTOR);
+    cyl(0.26, -0.12, -0.06, C_TRIM, 24);
+    cyl(0.07, -0.06, TOP + 0.04, C_TRIM, 12);
+
+    var tipDir = [Math.cos(phi), 0, Math.sin(phi)], tan = [-Math.sin(phi), 0, Math.cos(phi)];
+    var tip = mul(tipDir, ARM); tip[1] = TOP;
+    beam([0, TOP, 0], tip, 0.045, C_ARM);
+    // pendulum hangs off the arm tip, swinging in the tangent plane
+    var dirP = add(mul(tan, Math.sin(th)), [0, Math.cos(th), 0]);
+    var pivot = add(tip, mul(tipDir, 0.06));
+    var end = add(pivot, mul(dirP, ROD));
+    beam(pivot, end, 0.022, C_ROD);
+    box(pivot, mul(tipDir, 0.06), [0, 0.05, 0], mul(tan, 0.05), C_TRIM);
+    octa(end, 0.075, [th, tan], C_BOB, { glow: true });
+
+    // upright reference above the pivot, drawn behind the solid parts
+    line3(pivot, add(pivot, [0, ROD, 0]), 'rgba(184,153,90,.45)', 1, [4, 6]);
+
+    faces.sort(function(p, q){ return q.z - p.z; });
+    faces.forEach(function(f){
+      ctx.beginPath();
+      ctx.moveTo(f.pts[0][0], f.pts[0][1]);
+      for(var i = 1; i < f.pts.length; i++) ctx.lineTo(f.pts[i][0], f.pts[i][1]);
+      ctx.closePath();
+      if(f.glow){ ctx.shadowColor = 'rgba(121,200,238,.85)'; ctx.shadowBlur = 18; }
+      ctx.fillStyle = f.fill; ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = f.edge ? 'rgba(184,153,90,.55)' : 'rgba(0,0,0,.25)'; ctx.lineWidth = f.edge ? 1 : .5; ctx.stroke();
+    });
+
+    // angle trace along the bottom
+    var mid = H - 26, half = 18;
+    ctx.strokeStyle = 'rgba(184,153,90,.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, mid + .5); ctx.lineTo(W, mid + .5); ctx.stroke();
+    ctx.strokeStyle = '#79C8EE'; ctx.lineWidth = 2; ctx.beginPath();
+    var pen = false;
+    for(var i = 0; i < trace.length; i++){
+      if(trace[i] === null){ pen = false; continue; }
+      var tx = W - (trace.length - 1 - i) * (W / (N - 1));
+      var ty = mid - clamp(trace[i] / .6, -1, 1) * half;
+      if(!pen){ ctx.moveTo(tx, ty); pen = true; } else ctx.lineTo(tx, ty);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(156,165,184,.8)'; ctx.font = '13px "Noto Sans", sans-serif';
+    ctx.fillText(userOrbited ? '' : 'Drag to rotate', 14, 22);
+  }
+
+  var last = null;
+  function frame(t){
+    if(last === null) last = t;
+    var el = Math.min((t - last) / 1000, .05); last = t;
+    for(var i = 0; i < 10; i++) step(el / 10);
+    if(!userOrbited && !reduce) yaw += el * 0.12;          // slow idle orbit until someone drags
+
+    var tn = wrap(th);
+    trace.push(mode === 'balance' ? tn : null); if(trace.length > N) trace.shift();
+    var deg = tn * 180 / Math.PI; if(Math.abs(deg) > 179.5) deg = 180;
+    readout.textContent = 'θ = ' + deg.toFixed(1) + '°';
+    var hp = mode === 'balance' ? Math.round(clamp(1 - Math.abs(th) / .9, 0, 1) * 100) : 0;
+    var mp = Math.round(Math.min(1, Math.abs(a) / aMax) * 100);
+    hpbar.style.width = hp + '%'; hpv.textContent = hp + '%';
+    mpbar.style.width = mp + '%'; mpv.textContent = mp + '%';
+
+    var busy = lastStatus.indexOf('Objective') === 0 && Math.abs(th) < .2;
+    if(mode === 'down'){
+      if(!busy) setStatus(objs.swing ? 'It fell. Hit Swing up to go again.' : 'Hanging. Hit Swing up to get started.');
+    } else if(mode === 'swing'){
+      setStatus('Swinging up…');
+    } else {
+      var still = Math.abs(th) < .02 && Math.abs(w) < .05;
+      if(still){
+        calm += el;
+        if(disturbed && calm > .6){
+          disturbed = false;
+          if(pushed){ pushed = false; complete('push', 'recovered from a push'); }
+          if(!allDone) showBanner('Balance Restored');
+        }
+        else if(+ki.value === 0 && calm > 1.5) complete('ki', 'held it with Ki at 0');
+        else if(!busy && !banner.classList.contains('show')) setStatus('Holding steady.');
+      } else { calm = 0; if(!busy) setStatus('Recovering…'); }
+      if(+kd.value === 0 && Math.abs(th) > .035){ kdRing += el; if(kdRing > 2) complete('kd', 'saw what happens with Kd at 0'); }
+      else if(+kd.value !== 0) kdRing = 0;
+    }
+
+    draw();
+    requestAnimationFrame(frame);
+  }
+  reset();
+  requestAnimationFrame(frame);
+})();
+
+window.dispatchEvent(new Event('training-shown'));
+</script>
+</body>
+</html>
