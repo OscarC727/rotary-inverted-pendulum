@@ -24,11 +24,9 @@ The exoskeleton is an unstable system with a person inside it. The pendulum is t
 
 ## How we work
 
-- Each part of the build has one owner: mechanical, actuation and power, sensing, electronics, modeling, and software environment.
-- The PID controller has no single owner. We write it together, with everyone taking turns at the keyboard.
+- MATLAB and Simulink first, real hardware after.
 - All code runs on Linux on the Jetson, so everyone gets comfortable with SSH, Git, and the terminal before we touch the exo.
-
-I also run PID workshops for the team alongside the build.
+- I also run PID workshops for the team alongside the build.
 
 ## Repo layout
 
